@@ -6,6 +6,8 @@ import com.mojang.minecraft.level.LevelIO;
 import com.mojang.minecraft.net.ConnectionManager;
 import com.mojang.minecraft.net.NetworkPlayer;
 import com.mojang.minecraft.net.Packet;
+
+import net.lax1dude.eaglercraft.internal.EnumEaglerConnectionState;
 import net.lax1dude.eaglercraft.internal.IWebSocketClient;
 import net.lax1dude.eaglercraft.internal.IWebSocketFrame;
 import net.lax1dude.eaglercraft.internal.PlatformNetworking;
@@ -29,7 +31,7 @@ public final class SocketConnection {
 	public SocketConnection(String ip, int port) throws IOException {
 		String address = AddressResolver.resolveURI(ip + ":" + port).ip;
 		this.webSocket = PlatformNetworking.openWebSocket(address);
-		if (this.webSocket == null || this.webSocket.isClosed()) {
+		if (this.webSocket == null || this.webSocket.isClosed() || this.webSocket.getState() == EnumEaglerConnectionState.FAILED) {
 			throw new IOException("Failed to open websocket to: " + address);
 		}else {
 			this.connected = true;
@@ -52,6 +54,15 @@ public final class SocketConnection {
 	public final void processData() throws IOException {
 		IWebSocketFrame packet = this.webSocket.getNextBinaryFrame();
 		byte[] packetData = packet == null ? null : packet.getByteArray();
+		
+		if (this.webSocket == null || this.webSocket.isClosed()) {
+			if(this.webSocket.getState() == EnumEaglerConnectionState.CLOSED) {
+				this.connected = false;
+				throw new IOException("End of Stream");
+			} else if(this.webSocket.getState() == EnumEaglerConnectionState.FAILED) {
+				throw new IOException("Failed to connect");
+			}
+		}
 
 		if (packetData != null && packetData.length > 0) {
 			readBuffer.put(packetData);

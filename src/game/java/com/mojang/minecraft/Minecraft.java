@@ -460,11 +460,18 @@ public final class Minecraft implements Runnable {
 				try {
 					var8.connection.processData();
 				} catch (Exception var7) {
-					var8.minecraft.setScreen(new ErrorScreen("Disconnected!", "You\'ve lost connection to the server"));
-					var8.minecraft.hideGui = false;
-					var7.printStackTrace();
-					var8.connection.disconnect();
-					var8.minecraft.sendQueue = null;
+		            if (var7.getMessage() != "Failed to connect") {
+						var8.minecraft.setScreen(new ErrorScreen("Disconnected!", "You\'ve lost connection to the server"));
+						var8.minecraft.hideGui = false;
+						var7.printStackTrace();
+						var8.connection.disconnect();
+						var8.minecraft.sendQueue = null;
+					} else {
+						this.setScreen(new ErrorScreen("Failed to connect", "You failed to connect to the server. It\'s probably down!"));
+						var8.minecraft.hideGui = false;
+						var8.connection.disconnect();
+						var8.minecraft.sendQueue = null;
+					}
 				}
 			}
 
