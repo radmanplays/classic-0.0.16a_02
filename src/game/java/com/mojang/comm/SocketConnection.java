@@ -29,7 +29,7 @@ public final class SocketConnection {
 	public SocketConnection(String ip, int port) throws IOException {
 		String address = AddressResolver.resolveURI(ip + ":" + port).ip;
 		this.webSocket = PlatformNetworking.openWebSocket(address);
-		if (this.webSocket == null) {
+		if (this.webSocket == null || !this.webSocket.isOpen()) {
 			throw new IOException("Failed to open websocket to: " + address);
 		} else {
 			this.connected = true;
