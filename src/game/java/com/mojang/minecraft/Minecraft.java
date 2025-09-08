@@ -288,7 +288,9 @@ public final class Minecraft implements Runnable {
 						checkGlError("Pre render");
 						float var33 = this.timer.a;
 						if(!Display.isActive()) {
-							this.pauseGame();
+							if(this.screen == null){
+								this.pauseGame();
+							}
 						}
 
 						int var5;
