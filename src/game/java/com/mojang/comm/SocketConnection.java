@@ -29,9 +29,9 @@ public final class SocketConnection {
 	public SocketConnection(String ip, int port) throws IOException {
 		String address = AddressResolver.resolveURI(ip + ":" + port).ip;
 		this.webSocket = PlatformNetworking.openWebSocket(address);
-		if (this.webSocket == null || !this.webSocket.isOpen()) {
+		if (this.webSocket == null || this.webSocket.isClosed()) {
 			throw new IOException("Failed to open websocket to: " + address);
-		} else {
+		}else {
 			this.connected = true;
 		}
 		this.readBuffer.clear();
