@@ -58,6 +58,7 @@ public final class SocketConnection {
 		if (packetData != null && packetData.length > 0) {
 			readBuffer.put(packetData);
 		}
+		
 		if (this.webSocket == null || this.webSocket.isClosed()) {
 			if(this.webSocket.getState() == EnumEaglerConnectionState.CLOSED) {
 				this.connected = false;
