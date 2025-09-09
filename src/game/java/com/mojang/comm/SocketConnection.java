@@ -52,12 +52,13 @@ public final class SocketConnection {
 		}
 	}
 	public final void processData() throws IOException {
-		IWebSocketFrame packet = this.webSocket.getNextBinaryFrame();
-		byte[] packetData = packet == null ? null : packet.getByteArray();
-
-		if (packetData != null && packetData.length > 0) {
-			readBuffer.put(packetData);
+		List<IWebSocketFrame> frames = this.webSocket.getNextBinaryFrames();
+		if (frames != null) {
+			for (IWebSocketFrame frame : frames) {
+				readBuffer.put(frame.getByteArray());
+			}
 		}
+		
 		if (this.webSocket == null || this.webSocket.isClosed()) {
 			if(this.webSocket.getState() == EnumEaglerConnectionState.CLOSED) {
 				this.connected = false;
