@@ -452,7 +452,7 @@ public final class Minecraft implements Runnable {
 		if(this.sendQueue != null) {
 			ConnectionManager var8 = this.sendQueue;
 			SocketConnection var3 = var8.connection;
-			if(var8.isConnected() && var8.successful) {
+			if(var3.connected) {
 				try {
 					var8.connection.processData();
 				} catch (Exception var7) {
