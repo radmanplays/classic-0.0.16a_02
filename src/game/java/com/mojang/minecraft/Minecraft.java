@@ -198,7 +198,7 @@ public final class Minecraft implements Runnable {
 			IntBuffer var8 = GLAllocation.createIntBuffer(256);
 			var8.clear().limit(256);
 			GL11.glViewport(0, 0, this.width, this.height);
-			if(this.server != null) {
+			if(this.server != null && this.sendQueue == null) {
 				try {
 					var4.sendQueue = new ConnectionManager(var4, var4.server, var4.port, var4.user != null ? var4.user.name : "guest");
 				} catch (IOException var23) {
