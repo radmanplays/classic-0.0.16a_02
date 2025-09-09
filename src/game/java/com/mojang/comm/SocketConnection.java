@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.List;
 
 public final class SocketConnection {
 	public volatile boolean connected = false;
@@ -31,11 +32,7 @@ public final class SocketConnection {
 	public SocketConnection(String ip, int port) throws IOException {
 		String address = AddressResolver.resolveURI(ip + ":" + port).ip;
 		this.webSocket = PlatformNetworking.openWebSocket(address);
-		if (this.webSocket == null || this.webSocket.isClosed() || this.webSocket.getState() == EnumEaglerConnectionState.FAILED) {
-			throw new IOException("Failed to open websocket to: " + address);
-		}else {
-			this.connected = true;
-		}
+		this.connected = true;
 		this.readBuffer.clear();
 		this.writeBuffer.clear();
 	}
@@ -52,9 +49,6 @@ public final class SocketConnection {
 		}
 	}
 	public final void processData() throws IOException {
-		IWebSocketFrame packet = this.webSocket.getNextBinaryFrame();
-		byte[] packetData = packet == null ? null : packet.getByteArray();
-		
 		if (this.webSocket == null || this.webSocket.isClosed()) {
 			if(this.webSocket.getState() == EnumEaglerConnectionState.CLOSED) {
 				this.connected = false;
@@ -63,9 +57,12 @@ public final class SocketConnection {
 				throw new IOException("Failed to connect");
 			}
 		}
-
-		if (packetData != null && packetData.length > 0) {
-			readBuffer.put(packetData);
+		
+		List<IWebSocketFrame> frames = this.webSocket.getNextBinaryFrames();
+		if (frames != null) {
+			for (IWebSocketFrame frame : frames) {
+				readBuffer.put(frame.getByteArray());
+			}
 		}
 		
 		int var1 = 0;

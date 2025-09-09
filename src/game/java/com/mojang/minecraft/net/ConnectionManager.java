@@ -19,7 +19,6 @@ public final class ConnectionManager {
 		var5.manager = this;
 		this.connection.sendPacket(Packet.LOGIN, new Object[]{Byte.valueOf((byte)3), var4, "--"});
 		this.minecraft = var1;
-		var1.beginLevelLoading("Connecting..");
 		var1.hideGui = true;
 	}
 	
