@@ -7,7 +7,6 @@ import com.mojang.minecraft.net.ConnectionManager;
 import com.mojang.minecraft.net.NetworkPlayer;
 import com.mojang.minecraft.net.Packet;
 
-import net.lax1dude.eaglercraft.EagRuntime;
 import net.lax1dude.eaglercraft.internal.EnumEaglerConnectionState;
 import net.lax1dude.eaglercraft.internal.IWebSocketClient;
 import net.lax1dude.eaglercraft.internal.IWebSocketFrame;
@@ -29,12 +28,10 @@ public final class SocketConnection {
 	public ConnectionManager manager;
 	public byte[] stringPacket = new byte[64];
 	public IWebSocketClient webSocket;
-	private int timer = 0;
-	private String currentAddress;
 
 	public SocketConnection(String ip, int port) throws IOException {
 		String address = AddressResolver.resolveURI(ip + ":" + port).ip;
-		this.currentAddress = address;
+		this.webSocket = PlatformNetworking.openWebSocket(address);
 		this.connected = true;
 		this.readBuffer.clear();
 		this.writeBuffer.clear();
@@ -373,51 +370,6 @@ public final class SocketConnection {
 			writeBuffer.get(data);
 			this.webSocket.send(data);
 			writeBuffer.clear();
-		}
-	}
-	
-	
-	public void tick() {
-		++timer;
-		if (timer > 1) {
-			if (this.webSocket == null) {
-				this.webSocket = PlatformNetworking.openWebSocket(currentAddress);
-				if (this.webSocket == null) {
-					this.manager.minecraft.sendQueue = null;
-					this.manager.minecraft.setScreen(new ErrorScreen("Failed to connect",
-							"Could not open websocket to \"" + this.currentAddress + "\"!"));
-				}
-			} else {
-				if (this.webSocket
-						.getState() == EnumEaglerConnectionState.CONNECTED) {
-					if (!this.manager.successful) {
-						this.sendPacket(Packet.LOGIN, new Object[]{Byte.valueOf((byte)3), this.manager.minecraft.user.name, "--"});
-						this.manager.successful = true;
-						this.connected = true;
-					}
-				} else if (this.webSocket
-						.getState() == EnumEaglerConnectionState.FAILED) {
-					if (this.currentAddress.contains("ws://") && !EagRuntime.requireSSL()) {
-						if (this.webSocket != null) {
-							this.webSocket.close();
-							this.webSocket = null;
-						}
-						currentAddress = currentAddress.replace("ws://", "wss://");
-						timer = 0;
-					} else {
-						this.manager.minecraft.sendQueue = null;
-						this.manager.minecraft.setScreen(new ErrorScreen("Failed to connect",
-								"You failed to connect to the server. It\'s probably down!"));
-					}
-				}
-			}
-			if (timer > 200 && !this.connected) {
-				if (this.webSocket != null) {
-					this.webSocket.close();
-				}
-				this.manager.minecraft.sendQueue = null;
-				this.manager.minecraft.setScreen(new ErrorScreen("Failed to connect", "Connection timed out"));
-			}
 		}
 	}
 }
