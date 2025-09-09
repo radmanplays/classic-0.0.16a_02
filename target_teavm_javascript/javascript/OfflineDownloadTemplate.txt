@@ -64,8 +64,8 @@ ${classes_js}
 (function(){
 	window.eaglercraftXOpts.assetsURI = ${assets_epk};
 
-	if (!window.eaglercraftXOpts.server) {
-    	    window.eaglercraftXOpts.server = prompt("Enter server (IP:PORT)(leave empty if you want to play singleplayer)", "");
+	if (!window.eaglercraftXOpts.joinServer) {
+    	    window.eaglercraftXOpts.joinServer = prompt("Enter server (IP:PORT)(leave empty if you want to play singleplayer)", "");
 	}
 	if (!window.eaglercraftXOpts.username) {
             window.eaglercraftXOpts.username = prompt("Enter username", "");
