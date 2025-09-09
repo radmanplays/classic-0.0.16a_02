@@ -154,6 +154,9 @@ public final class Minecraft implements Runnable {
 		} catch (Exception var1) {
 			var1.printStackTrace();
 		}
+		if(this.sendQueue != null) {
+			sendQueue.connection.disconnect();
+		}
 		EagRuntime.destroy();
 	}
 
@@ -249,6 +252,9 @@ public final class Minecraft implements Runnable {
 		try {
 			while(this.running) {
 					if(Display.isCloseRequested()) {
+						if(this.sendQueue != null) {
+							sendQueue.connection.disconnect();
+						}
 						this.running = false;
 					}
 
@@ -1012,6 +1018,8 @@ public final class Minecraft implements Runnable {
 			this.player.setLevel(var1);
 			this.player.resetPos();
 		}
+
+		System.gc();
 	}
 	
 	public final void addChatMessage(String var1) {

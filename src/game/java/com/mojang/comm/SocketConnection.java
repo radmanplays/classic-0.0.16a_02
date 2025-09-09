@@ -49,19 +49,19 @@ public final class SocketConnection {
 		}
 	}
 	public final void processData() throws IOException {
-		List<IWebSocketFrame> frames = this.webSocket.getNextBinaryFrames();
-		if (frames != null) {
-			for (IWebSocketFrame frame : frames) {
-				readBuffer.put(frame.getByteArray());
-			}
-		}
-		
 		if (this.webSocket == null || this.webSocket.isClosed()) {
 			if(this.webSocket.getState() == EnumEaglerConnectionState.CLOSED) {
 				this.connected = false;
 				throw new IOException("End of Stream");
 			} else if(this.webSocket.getState() == EnumEaglerConnectionState.FAILED) {
 				throw new IOException("Failed to connect");
+			}
+		}
+		
+		List<IWebSocketFrame> frames = this.webSocket.getNextBinaryFrames();
+		if (frames != null) {
+			for (IWebSocketFrame frame : frames) {
+				readBuffer.put(frame.getByteArray());
 			}
 		}
 		
