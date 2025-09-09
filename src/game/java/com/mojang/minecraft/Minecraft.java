@@ -1,6 +1,5 @@
 package com.mojang.minecraft;
 
-import com.mojang.comm.SocketConnection;
 import com.mojang.minecraft.character.Vec3;
 import com.mojang.minecraft.character.Zombie;
 import com.mojang.minecraft.gui.ChatScreen;
@@ -76,8 +75,6 @@ public final class Minecraft implements Runnable {
 	public ConnectionManager sendQueue;
 	private List chatMessages = new ArrayList();
 	private static final int[] creativeTiles = new int[]{Tile.rock.id, Tile.dirt.id, Tile.stoneBrick.id, Tile.wood.id, Tile.bush.id, Tile.log.id, Tile.leaf.id, Tile.sand.id, Tile.gravel.id};
-	private String server = null;
-	private int port = 0;
 	private float fogColorRed = 0.5F;
 	private float fogColorGreen = 0.8F;
 	private float fogColorBlue = 1.0F;
@@ -105,8 +102,12 @@ public final class Minecraft implements Runnable {
 	}
 	
 	public final void setServer(String var1, int var2) {
-		this.server = var1;
-		this.port = var2;
+		try {
+			this.sendQueue = new ConnectionManager(this, var1, var2, this.user != null ? this.user.name : "guest");
+		} catch (IOException var23) {
+			this.setScreen(new ErrorScreen("Failed to connect", "You failed to connect to the server. It\'s probably down!"));
+		}
+
 	}
 	
 	public final void setScreen(Screen var1) {
@@ -114,7 +115,7 @@ public final class Minecraft implements Runnable {
 			if(this.screen != null) {
 				this.screen.closeScreen();
 			}
-	
+
 			this.screen = var1;
 			if(var1 != null) {
 				if(this.mouseGrabbed) {
@@ -122,6 +123,7 @@ public final class Minecraft implements Runnable {
 					this.mouseGrabbed = false;
 					Mouse.setGrabbed(false);
 				}
+
 				int var2 = this.width * 240 / this.height;
 				int var3 = this.height * 240 / this.height;
 				var1.init(this, var2, var3);
@@ -129,7 +131,6 @@ public final class Minecraft implements Runnable {
 				this.grabMouse();
 			}
 		}
-
 	}
 	
 	private static void checkGlError(String string) {
@@ -201,12 +202,7 @@ public final class Minecraft implements Runnable {
 			IntBuffer var8 = GLAllocation.createIntBuffer(256);
 			var8.clear().limit(256);
 			GL11.glViewport(0, 0, this.width, this.height);
-			if(this.server != null && this.sendQueue == null) {
-				try {
-					var4.sendQueue = new ConnectionManager(var4, var4.server, var4.port, var4.user != null ? var4.user.name : "guest");
-				} catch (IOException var23) {
-					this.setScreen(new ErrorScreen("Failed to connect", "You failed to connect to the server. It\'s probably down!"));
-				}
+			if(this.sendQueue != null) {
 				this.level = null;
 			} else {
 				boolean var9 = false;
@@ -256,6 +252,20 @@ public final class Minecraft implements Runnable {
 							sendQueue.connection.disconnect();
 						}
 						this.running = false;
+					}
+					
+					if(this.sendQueue != null) {
+						ConnectionManager c = this.sendQueue;
+
+						try {
+							c.connection.processData();
+						} catch (IOException var7) {
+							c.minecraft.setScreen(new ErrorScreen("Disconnected!", "You\'ve lost connection to the server"));
+							c.minecraft.hideGui = false;
+							var7.printStackTrace();
+							c.connection.disconnect();
+							c.minecraft.sendQueue = null;
+						}
 					}
 
 					try {
@@ -347,13 +357,14 @@ public final class Minecraft implements Runnable {
 				}
 
 			return;
-		} catch (Exception var28) {
-			var28.printStackTrace();
+		} catch (Exception var24) {
+			var24.printStackTrace();
 		} finally {
 			this.destroy();
 		}
 
 	}
+	
 	public final void stop() {
 		this.running = false;
 	}
@@ -445,87 +456,67 @@ public final class Minecraft implements Runnable {
 	}
 	
 	private void tick() {
-		int var1;
-		for(var1 = 0; var1 < this.chatMessages.size(); ++var1) {
+		int var3;
+		for(int var1 = 0; var1 < this.chatMessages.size(); ++var1) {
 			if((float)(((ChatLine)this.chatMessages.get(var1)).counter++) >= this.timer.ticksPerSecond * 10.0F) {
 				this.chatMessages.remove(var1--);
 			}
 		}
-
 		int var4;
-		int var9;
 		int var10;
 		if(this.sendQueue != null) {
-			ConnectionManager var8 = this.sendQueue;
-			SocketConnection var3 = var8.connection;
-			if(var3.connected) {
-				try {
-					var8.connection.processData();
-				} catch (Exception var7) {
-		            if (var7.getMessage() != "Failed to connect") {
-						var8.minecraft.setScreen(new ErrorScreen("Disconnected!", "You\'ve lost connection to the server"));
-						var8.minecraft.hideGui = false;
-						var7.printStackTrace();
-						var8.connection.disconnect();
-						var8.minecraft.sendQueue = null;
-					} else {
-						this.setScreen(new ErrorScreen("Failed to connect", "You failed to connect to the server. It\'s probably down!"));
-						var8.minecraft.hideGui = false;
-						var8.connection.disconnect();
-						var8.minecraft.sendQueue = null;
-					}
-				}
-			}
-
+			ConnectionManager var1 = this.sendQueue;
+			
 			Player var2 = this.player;
-			var8 = this.sendQueue;
+			ConnectionManager var8 = this.sendQueue;
 			var10 = (int)(var2.x * 32.0F);
 			var4 = (int)(var2.y * 32.0F);
 			int var5 = (int)(var2.z * 32.0F);
 			int var6 = (int)(var2.yRot * 256.0F / 360.0F) & 255;
-			var9 = (int)(var2.xRot * 256.0F / 360.0F) & 255;
+			int var9 = (int)(var2.xRot * 256.0F / 360.0F) & 255;
 			var8.connection.sendPacket(Packet.PLAYER_TELEPORT, new Object[]{Integer.valueOf(-1), Integer.valueOf(var10), Integer.valueOf(var4), Integer.valueOf(var5), Integer.valueOf(var6), Integer.valueOf(var9)});
 		}
 
-		LevelRenderer var12;
+		LevelRenderer var11;
 		if(this.screen != null) {
 			this.prevFrameTime = this.ticksRan + 10000;
 		} else {
-			label207:
+			if(Mouse.isMouseGrabbed() || Mouse.isActuallyGrabbed()) {
+				this.mouseGrabbed = true;
+			}
+			label194:
 			while(true) {
-				if(Mouse.isMouseGrabbed() || Mouse.isActuallyGrabbed()) {
-					this.mouseGrabbed = true;
-				}
+				int var8;
 				while(Mouse.next()) {
-					var1 = Mouse.getEventDWheel();
-					Minecraft var11;
-					if(var1 != 0) {
-						var9 = var1;
-						var11 = this;
-						if(var1 > 0) {
-							var9 = 1;
+					var8 = Mouse.getEventDWheel();
+					Minecraft var9;
+					if(var8 != 0) {
+						var10 = var8;
+						var9 = this;
+						if(var8 > 0) {
+							var10 = 1;
 						}
 
-						if(var9 < 0) {
-							var9 = -1;
+						if(var10 < 0) {
+							var10 = -1;
 						}
 
-						var10 = 0;
+						var3 = 0;
 
 						for(var4 = 0; var4 < creativeTiles.length; ++var4) {
-							if(creativeTiles[var4] == var11.paintTexture) {
-								var10 = var4;
+							if(creativeTiles[var4] == var9.paintTexture) {
+								var3 = var4;
 							}
 						}
 
-						for(var10 += var9; var10 < 0; var10 += creativeTiles.length) {
+						for(var3 += var10; var3 < 0; var3 += creativeTiles.length) {
 						}
 
-						while(var10 >= creativeTiles.length) {
-							var10 -= creativeTiles.length;
+						while(var3 >= creativeTiles.length) {
+							var3 -= creativeTiles.length;
 						}
 
-						var11.paintTexture = creativeTiles[var10];
+						var9.paintTexture = creativeTiles[var3];
 					}
 
 					if(!this.mouseGrabbed && Mouse.getEventButtonState()) {
@@ -541,21 +532,21 @@ public final class Minecraft implements Runnable {
 						}
 
 						if(Mouse.getEventButton() == 2 && Mouse.getEventButtonState()) {
-							var11 = this;
+							var9 = this;
 							if(this.hitResult != null) {
-								var9 = this.level.getTile(this.hitResult.x, this.hitResult.y, this.hitResult.z);
-								if(var9 == Tile.grass.id) {
-									var9 = Tile.dirt.id;
+								var10 = this.level.getTile(this.hitResult.x, this.hitResult.y, this.hitResult.z);
+								if(var10 == Tile.grass.id) {
+									var10 = Tile.dirt.id;
 								}
 
-								for(var10 = 0; var10 < creativeTiles.length; ++var10) {
-									if(var9 == creativeTiles[var10]) {
-										var11.paintTexture = creativeTiles[var10];
+								for(var3 = 0; var3 < creativeTiles.length; ++var3) {
+									if(var10 == creativeTiles[var3]) {
+										var9.paintTexture = creativeTiles[var3];
 									}
 								}
 							}
 						}
-					}
+					} 
 				}
 
 				while(true) {
@@ -565,7 +556,7 @@ public final class Minecraft implements Runnable {
 								this.clickMouse();
 								this.prevFrameTime = this.ticksRan;
 							}
-							break label207;
+							break label194;
 						}
 
 						this.player.setKey(Keyboard.getEventKey(), Keyboard.getEventKeyState());
@@ -584,9 +575,9 @@ public final class Minecraft implements Runnable {
 						this.player.resetPos();
 					}
 
-					for(var1 = 0; var1 < 9; ++var1) {
-						if(Keyboard.getEventKey() == var1 + 2) {
-							this.paintTexture = creativeTiles[var1];
+					for(var8 = 0; var8 < 9; ++var8) {
+						if(Keyboard.getEventKey() == var8 + 2) {
+							this.paintTexture = creativeTiles[var8];
 						}
 					}
 
@@ -599,10 +590,10 @@ public final class Minecraft implements Runnable {
 					}
 
 					if(Keyboard.getEventKey() == Keyboard.KEY_F) {
-						var12 = this.levelRenderer;
-						var12.drawDistance = (var12.drawDistance + 1) % 4;
+						var11 = this.levelRenderer;
+						var11.drawDistance = (var11.drawDistance + 1) % 4;
 					}
-
+					
 					if(Keyboard.getEventKey() == Keyboard.KEY_T) {
 						this.player.releaseAllKeys();
 						this.setScreen(new ChatScreen());
@@ -618,26 +609,25 @@ public final class Minecraft implements Runnable {
 			}
 		}
 		
-		if (sendQueue != null) {
-		    sendQueue.tick();
+		if(sendQueue != null) {
+			sendQueue.tick();
 		}
-
-
+		
 		if(this.level != null) {
-			var12 = this.levelRenderer;
-			++var12.cloudTickCounter;
+			var11 = this.levelRenderer;
+			++var11.cloudTickCounter;
 			this.level.tickEntities();
 			if(!this.isMultiplayer()) {
 				this.level.tick();
 			}
 
-			ParticleEngine var13 = this.particleEngine;
+			ParticleEngine var12 = this.particleEngine;
 
-			for(var9 = 0; var9 < var13.particles.size(); ++var9) {
-				Particle var14 = (Particle)var13.particles.get(var9);
-				var14.tick();
-				if(var14.removed) {
-					var13.particles.remove(var9--);
+			for(var10 = 0; var10 < var12.particles.size(); ++var10) {
+				Particle var13 = (Particle)var12.particles.get(var10);
+				var13.tick();
+				if(var13.removed) {
+					var12.particles.remove(var10--);
 				}
 			}
 
@@ -663,6 +653,9 @@ public final class Minecraft implements Runnable {
 	}
 
 	private void render(float var1) {
+		if(!Display.isActive()) {
+			this.pauseGame();
+		}
 		if (Display.wasResized()) {
 			this.width = Display.getWidth();
 			this.height = Display.getHeight();
@@ -742,7 +735,7 @@ public final class Minecraft implements Runnable {
 	    if (!Display.isActive() || !Mouse.isMouseGrabbed() || !Mouse.isActuallyGrabbed()) {
 	        if (System.currentTimeMillis() - prevFrameTime > 250L) {
 	            if (this.screen == null) {
-	            	pauseGame();
+	            	this.pauseGame();
 	            }
 	        }
 	    }
@@ -905,7 +898,7 @@ public final class Minecraft implements Runnable {
 		var3.end();
 		checkGlError("GUI: Draw crosshair");
 	}
-
+	
 	private void setupFog() {
 		GL11.glFog(GL11.GL_FOG_COLOR, this.getBuffer(this.fogColorRed, this.fogColorGreen, this.fogColorBlue, 1.0F));
 		Tile var1 = Tile.tiles[this.level.getTile((int)this.player.x, (int)(this.player.y + 0.12F), (int)this.player.z)];

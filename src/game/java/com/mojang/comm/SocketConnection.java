@@ -6,12 +6,8 @@ import com.mojang.minecraft.level.LevelIO;
 import com.mojang.minecraft.net.ConnectionManager;
 import com.mojang.minecraft.net.NetworkPlayer;
 import com.mojang.minecraft.net.Packet;
-
-import net.lax1dude.eaglercraft.internal.EnumEaglerConnectionState;
 import net.lax1dude.eaglercraft.internal.IWebSocketClient;
 import net.lax1dude.eaglercraft.internal.IWebSocketFrame;
-import net.lax1dude.eaglercraft.internal.PlatformNetworking;
-import net.lax1dude.eaglercraft.socket.AddressResolver;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -19,65 +15,34 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.List;
 
 public final class SocketConnection {
-	public volatile boolean connected = false;
 	public ByteBuffer readBuffer = ByteBuffer.allocate(1048576);
 	public ByteBuffer writeBuffer = ByteBuffer.allocate(1048576);
 	public ConnectionManager manager;
 	public byte[] stringPacket = new byte[64];
 	public IWebSocketClient webSocket;
 
-	public SocketConnection(String ip, int port) throws IOException {
-		String address = AddressResolver.resolveURI(ip + ":" + port).ip;
-		this.webSocket = PlatformNetworking.openWebSocket(address);
-		this.connected = true;
+	public SocketConnection(ConnectionManager var1) {
+		this.manager = var1;
 		this.readBuffer.clear();
 		this.writeBuffer.clear();
 	}
 
 	public final void disconnect() {
-		try {
-			flush();
-		} catch (Exception ignored) {
-		}
-		this.connected = false;
 		if (this.webSocket != null) {
 			this.webSocket.close();
 			this.webSocket = null;
 		}
 	}
-	public final void processData() throws IOException {
-		if (this.webSocket == null) {
-		    this.connected = false;
-		    throw new IOException("End of Stream");
-		} 
-		if (this.webSocket.isClosed()) {
-		    EnumEaglerConnectionState s = this.webSocket.getState();
-		    if (s == EnumEaglerConnectionState.CLOSED) {
-		        this.connected = false;
-		        throw new IOException("End of Stream");
-		    } else if (s == EnumEaglerConnectionState.FAILED) {
-		        throw new IOException("Failed to connect");
-		    }
-		}
 
-		
-		List<IWebSocketFrame> frames = this.webSocket.getNextBinaryFrames();
-	    if (frames != null) {
-	        for (IWebSocketFrame frame : frames) {
-	            byte[] b = frame.getByteArray();
-	            if (b.length > readBuffer.remaining()) {
-	                readBuffer.compact();
-	                if (b.length > readBuffer.remaining()) {
-	                    this.manager.connection.disconnect();
-	                    return;
-	                }
-	            }
-	            readBuffer.put(b);
-	        }
-	    }
+	public final void processData() throws IOException {
+		IWebSocketFrame packet = this.webSocket.getNextBinaryFrame();
+		byte[] packetData = packet == null ? null : packet.getByteArray();
+
+		if (packetData != null && packetData.length > 0) {
+			readBuffer.put(packetData);
+		}
 		
 		int var1 = 0;
 
@@ -85,11 +50,11 @@ public final class SocketConnection {
 			this.readBuffer.flip();
 			byte var2 = this.readBuffer.get(0);
 			Packet var3 = Packet.PACKETS[var2];
-			if(var3 == null) {
+			if (var3 == null) {
 				throw new IOException("Bad command: " + var2);
 			}
 
-			if(this.readBuffer.remaining() < var3.size + 1) {
+			if (this.readBuffer.remaining() < var3.size + 1) {
 				this.readBuffer.compact();
 				break;
 			}
@@ -97,7 +62,7 @@ public final class SocketConnection {
 			this.readBuffer.get();
 			Object[] var11 = new Object[var3.fields.length];
 
-			for(int var4 = 0; var4 < var11.length; ++var4) {
+			for (int var4 = 0; var4 < var11.length; ++var4) {
 				var11[var4] = this.read(var3.fields[var4]);
 			}
 
@@ -266,81 +231,68 @@ public final class SocketConnection {
 					}
 				}
 			}
-
-			if(!this.connected) {
-				break;
-			}
-
 			this.readBuffer.compact();
 		}
 		flush();
-
 	}
 
 	public final void sendPacket(Packet var1, Object... var2) {
-		if(this.connected) {
-			this.writeBuffer.put(var1.id);
+		this.writeBuffer.put(var1.id);
 
-			for(int var3 = 0; var3 < var2.length; ++var3) {
-				Class var10001 = var1.fields[var3];
-				Object var6 = var2[var3];
-				Class var5 = var10001;
-				SocketConnection var4 = this;
-				if(this.connected) {
-					try {
-						if(var5 == Long.TYPE) {
-							var4.writeBuffer.putLong(((Long)var6).longValue());
-						} else if(var5 == Integer.TYPE) {
-							var4.writeBuffer.putInt(((Number)var6).intValue());
-						} else if(var5 == Short.TYPE) {
-							var4.writeBuffer.putShort(((Number)var6).shortValue());
-						} else if(var5 == Byte.TYPE) {
-							var4.writeBuffer.put(((Number)var6).byteValue());
-						} else if(var5 == Double.TYPE) {
-							var4.writeBuffer.putDouble(((Double)var6).doubleValue());
-						} else if(var5 == Float.TYPE) {
-							var4.writeBuffer.putFloat(((Float)var6).floatValue());
-						} else {
-							byte[] var9;
-							if(var5 != String.class) {
-								if(var5 == byte[].class) {
-									var9 = (byte[])((byte[])var6);
-									if(var9.length < 1024) {
-										var9 = Arrays.copyOf(var9, 1024);
-									}
-
-									var4.writeBuffer.put(var9);
-								}
-							} else {
-								var9 = ((String)var6).getBytes(Charset.forName("UTF-8"));
-								Arrays.fill(var4.stringPacket, (byte)32);
-
-								int var10;
-								for(var10 = 0; var10 < 64 && var10 < var9.length; ++var10) {
-									var4.stringPacket[var10] = var9[var10];
+		for(int var3 = 0; var3 < var2.length; ++var3) {
+			Class var10001 = var1.fields[var3];
+			Object var6 = var2[var3];
+			Class var5 = var10001;
+			SocketConnection var4 = this;
+				try {
+					if(var5 == Long.TYPE) {
+						var4.writeBuffer.putLong(((Long)var6).longValue());
+					} else if(var5 == Integer.TYPE) {
+						var4.writeBuffer.putInt(((Number)var6).intValue());
+					} else if(var5 == Short.TYPE) {
+						var4.writeBuffer.putShort(((Number)var6).shortValue());
+					} else if(var5 == Byte.TYPE) {
+						var4.writeBuffer.put(((Number)var6).byteValue());
+					} else if(var5 == Double.TYPE) {
+						var4.writeBuffer.putDouble(((Double)var6).doubleValue());
+					} else if(var5 == Float.TYPE) {
+						var4.writeBuffer.putFloat(((Float)var6).floatValue());
+					} else {
+						byte[] var9;
+						if(var5 != String.class) {
+							if(var5 == byte[].class) {
+								var9 = (byte[])((byte[])var6);
+								if(var9.length < 1024) {
+									var9 = Arrays.copyOf(var9, 1024);
 								}
 
-								for(var10 = var9.length; var10 < 64; ++var10) {
-									var4.stringPacket[var10] = 32;
-								}
-
-								var4.writeBuffer.put(var4.stringPacket);
+								var4.writeBuffer.put(var9);
 							}
-						}
-					} catch (Exception var7) {
-						ConnectionManager var8 = this.manager;
-						var8.connection.disconnect();
-					}
-				}
-			}
-			flush();
-		}
-	}
+						} else {
+							var9 = ((String)var6).getBytes(Charset.forName("UTF-8"));
+							Arrays.fill(var4.stringPacket, (byte)32);
 
+							int var10;
+							for(var10 = 0; var10 < 64 && var10 < var9.length; ++var10) {
+								var4.stringPacket[var10] = var9[var10];
+							}
+
+							for(var10 = var9.length; var10 < 64; ++var10) {
+								var4.stringPacket[var10] = 32;
+							}
+
+							var4.writeBuffer.put(var4.stringPacket);
+						}
+					}
+				} catch (Exception var7) {
+					ConnectionManager var8 = this.manager;
+					var8.connection.disconnect();
+				}
+		}
+		flush();
+	}
+	
 	public Object read(Class var1) {
-		if(!this.connected) {
-			return null;
-		} else {
 			try {
 				if(var1 == Long.TYPE) {
 					return Long.valueOf(this.readBuffer.getLong());
@@ -369,9 +321,7 @@ public final class SocketConnection {
 				var3.connection.disconnect();
 				return null;
 			}
-		}
 	}
-
 
 	public void flush() {
 	    if (webSocket == null || !webSocket.isOpen()) {

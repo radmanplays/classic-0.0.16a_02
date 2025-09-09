@@ -15,8 +15,8 @@ import org.lwjgl.opengl.GL11;
 
 public class Screen {
 	protected Minecraft minecraft;
-	protected int y;
-	protected int w;
+	protected int width;
+	protected int height;
 	protected List buttons = new ArrayList();
 
 	public void render(int var1, int var2) {
@@ -56,8 +56,8 @@ public class Screen {
 
 	public final void init(Minecraft var1, int var2, int var3) {
 		this.minecraft = var1;
-		this.y = var2;
-		this.w = var3;
+		this.width = var2;
+		this.height = var3;
 		this.init();
 	}
 
@@ -125,8 +125,8 @@ public class Screen {
 					continue;
 				}
 
-				int var1 = Mouse.getEventX() * this.y / this.minecraft.width;
-				int var2 = this.w - Mouse.getEventY() * this.w / this.minecraft.height - 1;
+				int var1 = Mouse.getEventX() * this.width / this.minecraft.width;
+				int var2 = this.height - Mouse.getEventY() * this.height / this.minecraft.height - 1;
 				int var4 = Mouse.getEventButton();
 				int var3 = var2;
 				var2 = var1;
