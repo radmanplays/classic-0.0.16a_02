@@ -612,6 +612,9 @@ public final class Minecraft implements Runnable {
 			}
 		}
 
+		if(this.sendQueue != null) {
+			this.sendQueue.connection.tick();
+		}
 		if(this.level != null) {
 			var12 = this.levelRenderer;
 			++var12.cloudTickCounter;
