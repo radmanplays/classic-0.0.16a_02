@@ -65,11 +65,19 @@ public final class SocketConnection {
 
 		
 		List<IWebSocketFrame> frames = this.webSocket.getNextBinaryFrames();
-		if (frames != null) {
-			for (IWebSocketFrame frame : frames) {
-				readBuffer.put(frame.getByteArray());
-			}
-		}
+	    if (frames != null) {
+	        for (IWebSocketFrame frame : frames) {
+	            byte[] b = frame.getByteArray();
+	            if (b.length > readBuffer.remaining()) {
+	                readBuffer.compact();
+	                if (b.length > readBuffer.remaining()) {
+	                    this.manager.connection.disconnect();
+	                    return;
+	                }
+	            }
+	            readBuffer.put(b);
+	        }
+	    }
 		
 		int var1 = 0;
 

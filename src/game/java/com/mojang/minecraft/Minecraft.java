@@ -148,7 +148,7 @@ public final class Minecraft implements Runnable {
 	public final void destroy() {
 		Minecraft var2 = this;
 		try {
-			if(this.sendQueue == null) {
+			if(this.sendQueue == null && var2.level != null) {
 				LevelIO.save(var2.level, new VFile2("level.dat"));
 			}
 		} catch (Exception var1) {
@@ -617,6 +617,11 @@ public final class Minecraft implements Runnable {
 				this.screen.tick();
 			}
 		}
+		
+		if (sendQueue != null) {
+		    sendQueue.tick();
+		}
+
 
 		if(this.level != null) {
 			var12 = this.levelRenderer;
