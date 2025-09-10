@@ -49,15 +49,19 @@ public final class Font {
 
 	public final void drawShadow(String var1, int var2, int var3, int var4) {
 		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
-		this.draw(var1, var2 + 1, var3 + 1, var4, true);
-		this.draw(var1, var2, var3, var4, false);
+		this.draw(var1, var2 + 1, var3 + 1, var4, true, true);
+		this.draw(var1, var2, var3, var4, false, true);
 	}
 	
 	public final void draw(String var1, int var2, int var3, int var4) {
-		this.draw(var1, var2, var3, var4, false);
+		this.draw(var1, var2, var3, var4, false, true);
+	}
+	
+	public final void drawnocolorcode(String var1, int var2, int var3, int var4) {
+		this.draw(var1, var2, var3, var4, false, false);
 	}
 
-	private void draw(String var1, int var2, int var3, int var4, boolean var5) {
+	private void draw(String var1, int var2, int var3, int var4, boolean var5, boolean colorcodes) {
 		char[] var12 = var1.toCharArray();
 		if(var5) {
 			var4 = (var4 & 16579836) >> 2;
@@ -73,7 +77,7 @@ public final class Font {
 
 		for(int var8 = 0; var8 < var12.length; ++var8) {
 			int var9;
-			if(var12[var8] == 38) {
+			if(var12[var8] == 38 && colorcodes) {
 				var4 = "0123456789abcdef".indexOf(var12[var8 + 1]);
 				var9 = (var4 & 8) << 3;
 				int var10 = (var4 & 1) * 191 + var9;

@@ -145,9 +145,9 @@ public class NetworkPlayer extends Entity {
 		GL11.glScalef(var2, -var2, var2);
 		GL11.glTranslatef((float)(-var9.width(this.name)) / 2.0F, 0.0F, 0.0F);
 		if(this.name.equalsIgnoreCase("Notch") || this.name.equalsIgnoreCase("radmanplays")) {
-			var9.draw(this.name, 0, 0, 16776960);
+			var9.drawnocolorcode(this.name, 0, 0, 16776960);
 		} else {
-			var9.draw(this.name, 0, 0, 16777215);
+			var9.drawnocolorcode(this.name, 0, 0, 16777215);
 		}
 
 		GL11.glTranslatef(1.0F, 1.0F, -0.05F);

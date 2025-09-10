@@ -23,7 +23,12 @@ public final class ConnectionManager {
 		SocketConnection var5 = this.connection;
 		var5.manager = this;
 		this.minecraft = var1;
-		String address = AddressResolver.resolveURI(var2 + ":" + var3).ip;
+		String address;
+		if(var3 != -1) {
+			address = AddressResolver.resolveURI(var2).ip;
+		} else {
+			address = AddressResolver.resolveURI(var2 + ":" + var3).ip;
+		}
 		this.connection.webSocket = PlatformNetworking.openWebSocket(address);
 
 		if (this.connection.webSocket == null) {
